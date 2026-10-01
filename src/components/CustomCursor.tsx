@@ -1,18 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 
 export default function CustomCursor() {
-  const [mousePos, setMousePos] = useState({ x: -100, y: -100 });
+  const cursorRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [isClicked, setIsClicked] = useState(false);
   const [cursorText, setCursorText] = useState("");
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
+    const cursor = cursorRef.current;
+
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX, y: e.clientY });
+      // 0ms Zero-Latency Direct GPU Positioning (No React re-render lag or spring delay)
+      if (cursor) {
+        cursor.style.transform = `translate3d(${e.clientX - 2}px, ${e.clientY - 2}px, 0)`;
+      }
       if (!isVisible) setIsVisible(true);
     };
 
@@ -38,10 +42,16 @@ export default function CustomCursor() {
       }
     };
 
-    const handleMouseLeave = () => setIsVisible(false);
-    const handleMouseEnter = () => setIsVisible(true);
+    const handleMouseLeave = () => {
+      if (cursor) cursor.style.opacity = "0";
+    };
 
-    window.addEventListener("mousemove", handleMouseMove);
+    const handleMouseEnter = () => {
+      if (cursor) cursor.style.opacity = "1";
+      setIsVisible(true);
+    };
+
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
     window.addEventListener("mousedown", handleMouseDown);
     window.addEventListener("mouseup", handleMouseUp);
     window.addEventListener("mouseover", handleMouseOver);
@@ -58,60 +68,56 @@ export default function CustomCursor() {
     };
   }, [isVisible]);
 
-  if (!isVisible) return null;
-
   return (
     <div className="pointer-events-none fixed inset-0 z-[99999] overflow-hidden hidden md:block">
-      {/* Play Button Cursor in Monochrome White/Silver (Without any background box) */}
-      <motion.div
-        className="fixed top-0 left-0 flex items-center gap-2 select-none"
-        animate={{
-          x: mousePos.x - 2,
-          y: mousePos.y - 2,
-          scale: isClicked ? 0.82 : isHovered ? 1.25 : 1,
-        }}
-        transition={{
-          type: "spring",
-          damping: 24,
-          stiffness: 450,
-          mass: 0.25,
+      {/* 0ms Zero-Latency Hardware Accelerated Play Button Cursor */}
+      <div
+        ref={cursorRef}
+        className={`fixed top-0 left-0 flex items-center gap-2 select-none pointer-events-none will-change-transform ${
+          isVisible ? "opacity-100" : "opacity-0"
+        }`}
+        style={{
+          transform: "translate3d(-100px, -100px, 0)",
+          transition: "opacity 0.2s ease",
         }}
       >
-        {/* Play Icon (Pure SVG Triangle with White Ethereal Glow, No Background) */}
-        <svg
-          width="26"
-          height="26"
-          viewBox="0 0 24 24"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="transition-transform duration-200"
+        {/* Play Icon (Pure SVG Triangle with Instant Response) */}
+        <div
+          className="transition-transform duration-150 ease-out"
           style={{
-            filter: isHovered
-              ? "drop-shadow(0 0 10px #FFFFFF) drop-shadow(0 0 20px rgba(255, 255, 255, 0.9))"
-              : "drop-shadow(0 0 8px rgba(255, 255, 255, 0.6))",
+            transform: isClicked ? "scale(0.82)" : isHovered ? "scale(1.25)" : "scale(1)",
           }}
         >
-          {/* Main Play Triangle Fill */}
-          <path
-            d="M5 3.5V20.5L19.5 12L5 3.5Z"
-            fill={isHovered ? "#FFFFFF" : "#EEEEEE"}
-            stroke="#111111"
-            strokeWidth="1.2"
-            strokeLinejoin="round"
-          />
-        </svg>
-
-        {/* Optional Context Label in Monochrome */}
-        {cursorText && (
-          <motion.span
-            initial={{ opacity: 0, x: -5 }}
-            animate={{ opacity: 1, x: 0 }}
-            className="px-2 py-0.5 text-[9px] font-mono font-bold tracking-widest text-black uppercase bg-white border border-white rounded shadow-[0_0_15px_rgba(255,255,255,0.6)]"
+          <svg
+            width="26"
+            height="26"
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+            style={{
+              filter: isHovered
+                ? "drop-shadow(0 0 10px #FFFFFF) drop-shadow(0 0 20px rgba(255, 255, 255, 0.9))"
+                : "drop-shadow(0 0 8px rgba(255, 255, 255, 0.6))",
+            }}
           >
+            {/* Main Play Triangle Fill */}
+            <path
+              d="M5 3.5V20.5L19.5 12L5 3.5Z"
+              fill={isHovered ? "#FFFFFF" : "#EEEEEE"}
+              stroke="#111111"
+              strokeWidth="1.2"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+
+        {/* Context Text Label in Monochrome */}
+        {cursorText && (
+          <span className="px-2 py-0.5 text-[9px] font-mono font-bold tracking-widest text-black uppercase bg-white border border-white rounded shadow-[0_0_15px_rgba(255,255,255,0.6)] animate-in fade-in duration-150">
             {cursorText}
-          </motion.span>
+          </span>
         )}
-      </motion.div>
+      </div>
     </div>
   );
 }
